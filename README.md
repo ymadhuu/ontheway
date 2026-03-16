@@ -1,7 +1,7 @@
-# 🚆 ONTHEWAY – Train Tracking Web Application
+# 🚆 ONTHEWAY – Train Booking Web Application
 
 ## 📌 Project Overview
-ONTHEWAY is a web-based train tracking application that helps users easily search and track train details. The system provides information about train routes, schedules, and availability through a simple and user-friendly interface.
+ONTHEWAY is a web-based train booking application that helps users easily search and track train details. The system provides information about train routes, schedules, and availability through a simple and user-friendly interface.
 
 This project is designed to demonstrate web development using Python and modern web technologies.
 
