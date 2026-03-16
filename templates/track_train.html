@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Train Tracking - OTW Rail</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), 
+                        url("{{ url_for('static', filename='images/dashboard.jpg') }}") no-repeat center center fixed;
+            background-size: cover;
+            margin: 0; font-family: 'Segoe UI', sans-serif; color: white;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(15px);
+            padding: 15px 50px; display: flex; justify-content: space-between;
+            align-items: center; position: fixed; top: 0; width: 100%;
+            z-index: 1000; box-sizing: border-box; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-links { display: flex; gap: 25px; align-items: center; }
+        .nav-link { color: #bbb; text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: 0.3s; }
+        .nav-link:hover { color: #00ff88; }
+
+        .tracking-container {
+            margin-top: 100px; padding: 30px; max-width: 900px; margin-left: auto; margin-right: auto;
+        }
+
+        .track-card {
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px);
+            padding: 30px; border-radius: 25px; border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 45px rgba(0,0,0,0.6); margin-bottom: 20px;
+        }
+
+        .train-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .status-badge {
+            padding: 10px 20px; border-radius: 20px; font-weight: bold;
+            background: linear-gradient(45deg, #00ff88, #00d2ff);
+            color: #000; font-size: 0.9rem;
+        }
+
+        .status-badge.delayed {
+            background: linear-gradient(45deg, #ff4b2b, #ff6b4a);
+            color: white;
+        }
+
+        .station-list {
+            margin-top: 20px;
+        }
+
+        .station-item {
+            display: flex; align-items: center; padding: 15px;
+            margin-bottom: 10px; background: rgba(0,0,0,0.3);
+            border-radius: 12px; border-left: 4px solid #00d2ff;
+            transition: 0.3s;
+        }
+
+        .station-item.current {
+            border-left-color: #00ff88;
+            background: rgba(0,255,136,0.15);
+            box-shadow: 0 0 20px rgba(0,255,136,0.3);
+        }
+
+        .station-item.passed {
+            opacity: 0.5;
+            border-left-color: #888;
+        }
+
+        .station-info {
+            flex: 1;
+        }
+
+        .station-name {
+            font-size: 1.1rem; font-weight: bold; color: #00d2ff;
+            margin-bottom: 5px;
+        }
+
+        .station-code {
+            font-size: 0.8rem; opacity: 0.7; font-family: monospace;
+        }
+
+        .station-time {
+            text-align: right;
+        }
+
+        .time-main {
+            font-size: 1.1rem; font-weight: bold;
+        }
+
+        .time-delay {
+            font-size: 0.8rem; color: #ff4b2b; margin-top: 5px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            color: white; border: none; padding: 12px 25px;
+            border-radius: 12px; font-weight: bold; cursor: pointer;
+            margin-top: 20px; width: 100%;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .loading {
+            text-align: center; padding: 40px;
+            font-size: 1.2rem; color: #00d2ff;
+        }
+
+        .route-line {
+            width: 3px; background: linear-gradient(to bottom, #00ff88, #00d2ff, #888);
+            margin: 0 20px; min-height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span>🚄</span> 
+            <span style="font-weight: 800; color: #00d2ff;">ON THE WAY</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link">← Back to Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="tracking-container">
+        <div class="track-card">
+            <div class="train-header">
+                <div>
+                    <h2 id="trainName" style="margin:0; color:#00d2ff;">Loading...</h2>
+                    <p id="trainNumber" style="margin:5px 0 0 0; opacity:0.7;">Train No: -</p>
+                </div>
+                <div id="statusBadge" class="status-badge">Loading...</div>
+            </div>
+
+            <div id="loadingDiv" class="loading">
+                <div>🔄 Fetching train status...</div>
+            </div>
+
+            <div id="stationList" class="station-list" style="display:none;">
+                <!-- Stations will be populated here -->
+            </div>
+
+            <button class="refresh-btn" onclick="loadTrainStatus()">🔄 Refresh Status</button>
+            <p style="text-align:center; margin-top:15px; opacity:0.6; font-size:0.85rem;">
+                Last updated: <span id="lastUpdated">-</span>
+            </p>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Get train number and date from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const trainNumber = urlParams.get('train') || '12345';
+        const journeyDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
+
+        async function loadTrainStatus() {
+            const loadingDiv = document.getElementById('loadingDiv');
+            const stationList = document.getElementById('stationList');
+            const trainNameEl = document.getElementById('trainName');
+            const trainNumberEl = document.getElementById('trainNumber');
+            const statusBadge = document.getElementById('statusBadge');
+            const lastUpdated = document.getElementById('lastUpdated');
+
+            loadingDiv.style.display = 'block';
+            stationList.style.display = 'none';
+
+            try {
+                const response = await fetch(`/api/train-status?train=${trainNumber}&date=${journeyDate}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    trainNameEl.textContent = data.trainName;
+                    trainNumberEl.textContent = `Train No: ${data.trainNumber}`;
+                    
+                    const isDelayed = data.delay > 15;
+                    statusBadge.textContent = isDelayed ? `Delayed by ${data.delay} min` : 'Running On Time';
+                    statusBadge.className = `status-badge ${isDelayed ? 'delayed' : ''}`;
+
+                    // Display stations
+                    let stationHTML = '';
+                    let currentFound = false;
+
+                    data.allStations.forEach((station, index) => {
+                        const isCurrent = station.name === data.currentStation.name;
+                        const isPassed = index < data.allStations.indexOf(data.currentStation);
+                        
+                        if (isCurrent) currentFound = true;
+
+                        stationHTML += `
+                            <div class="station-item ${isCurrent ? 'current' : isPassed ? 'passed' : ''}">
+                                <div class="station-info">
+                                    <div class="station-name">
+                                        ${isCurrent ? '📍 ' : ''}${station.name}
+                                    </div>
+                                    <div class="station-code">${station.code}</div>
+                                </div>
+                                <div class="station-time">
+                                    <div class="time-main">${station.arrival}</div>
+                                    ${station.delay > 0 ? `<div class="time-delay">+${station.delay} min</div>` : ''}
+                                    ${station.departure !== station.arrival ? `<div style="font-size:0.8rem; opacity:0.7; margin-top:3px;">Dep: ${station.departure}</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    stationList.innerHTML = stationHTML;
+                    lastUpdated.textContent = data.lastUpdated || new Date().toLocaleString();
+                    
+                    loadingDiv.style.display = 'none';
+                    stationList.style.display = 'block';
+                } else {
+                    loadingDiv.innerHTML = `<div style="color:#ff4b2b;">Error: ${data.error}</div>`;
+                }
+            } catch (e) {
+                console.error("Error:", e);
+                loadingDiv.innerHTML = `<div style="color:#ff4b2b;">Error loading train status. Please try again.</div>`;
+            }
+        }
+
+        // Load status on page load
+        loadTrainStatus();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadTrainStatus, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Login - OTW</title>
+    <style>
+        body {
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), 
+                        url("{{ url_for('static', filename='images/loginpage.jpg') }}") no-repeat center center fixed;
+            background-size: cover; font-family: 'Segoe UI', sans-serif;
+            display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;
+        }
+        .admin-card {
+            background: rgba(20, 20, 20, 0.7); backdrop-filter: blur(20px);
+            padding: 40px; border-radius: 20px; width: 350px; text-align: center;
+            border: 1px solid #ff4b2b; box-shadow: 0 0 25px rgba(255, 75, 43, 0.4);
+        }
+        h2 { color: #ff4b2b; margin-bottom: 30px; letter-spacing: 2px; }
+        input {
+            width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.1);
+            color: white; outline: none; box-sizing: border-box;
+        }
+        .btn-admin {
+            width: 100%; padding: 12px; border-radius: 10px; border: none;
+            background: #ff4b2b; color: white; font-weight: bold; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-card">
+        <h2>🛡️ ADMIN ACCESS</h2>
+        <input type="email" id="adminEmail" placeholder="Admin ID">
+        <input type="password" id="adminPass" placeholder="Secret Key">
+        <button class="btn-admin" onclick="verifyAdmin()">LOGIN TO PANEL</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+
+    <script>
+        function verifyAdmin() {
+            const email = document.getElementById('adminEmail').value;
+            const pass = document.getElementById('adminPass').value;
+
+            firebase.auth().signInWithEmailAndPassword(email, pass)
+            .then((userCredential) => {
+                // Yahan apna admin email dalo
+                if(userCredential.user.email === "admin@otw.com") {
+                    window.location.href = "/admin";
+                } else {
+                    alert("Unauthorized! Aap admin nahi ho.");
+                    firebase.auth().signOut();
+                }
+            })
+            .catch(e => alert("Error: " + e.message));
+        }
+    </script>
+</body>
+</html>

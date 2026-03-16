@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - OTW</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), 
+                        url("{{ url_for('static', filename='images/dashboard.jpg') }}") no-repeat center center fixed;
+            background-size: cover;
+            margin: 0; font-family: 'Segoe UI', sans-serif; color: white;
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+        }
+
+        .navbar {
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(15px);
+            padding: 15px 50px; display: flex; justify-content: space-between;
+            align-items: center; position: fixed; top: 0; width: 100%;
+            z-index: 1000; box-sizing: border-box; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-links { display: flex; gap: 25px; align-items: center; }
+        .nav-link { color: #bbb; text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: 0.3s; }
+        .nav-link:hover { color: #00ff88; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px);
+            padding: 40px; border-radius: 25px; border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 45px rgba(0,0,0,0.6); margin-top: 110px;
+            width: 90%; max-width: 550px; text-align: center;
+        }
+
+        /* Analytics Section */
+        .analytics-box {
+            width: 100%; background: rgba(0,0,0,0.3); padding: 15px;
+            border-radius: 15px; margin: 20px 0; height: 200px; box-sizing: border-box;
+        }
+
+        /* PNR Tracker CSS */
+        .pnr-tracker-box {
+            background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 15px; 
+            margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: left;
+        }
+
+        .bookings-section { 
+            margin-top: 30px; text-align: left; width: 100%; 
+            max-height: 350px; overflow-y: auto; padding-right: 5px;
+        }
+
+        .booking-card {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 5px solid #00ff88; border-radius: 15px;
+            margin-bottom: 12px; transition: 0.3s ease; cursor: pointer; overflow: hidden;
+        }
+        .booking-card:hover { background: rgba(255, 255, 255, 0.1); }
+        .ticket-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .ticket-details {
+            max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out;
+            background: rgba(0, 0, 0, 0.25); padding: 0 15px;
+        }
+        .booking-card.active .ticket-details { max-height: 300px; padding: 15px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+        .pnr-tag { display: inline-block; font-family: monospace; color: #fff; background: rgba(0, 210, 255, 0.2); padding: 2px 8px; border-radius: 5px; font-size: 0.8rem; }
+        .detail-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; border-bottom: 1px dotted rgba(255,255,255,0.1); padding-bottom: 4px; }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            color: white; border: none; padding: 15px; border-radius: 12px;
+            font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem;
+        }
+
+        /* Chatbot UI */
+        #chatbot-window { position: fixed; bottom: 100px; right: 30px; width: 320px; height: 450px; background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; display: none; flex-direction: column; overflow: hidden; z-index: 1001; }
+        .chat-header { background: linear-gradient(45deg, #00ff88, #00d2ff); padding: 15px; color: #000; font-weight: 800; display: flex; justify-content: space-between; }
+        #chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 14px; border-radius: 15px; font-size: 0.85rem; max-width: 80%; }
+        .bot { background: rgba(255,255,255,0.1); align-self: flex-start; }
+        .user { background: #00ff88; color: #000; align-self: flex-end; }
+        #chatInput { flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 10px; outline: none; }
+        
+        /* Print ticket styles */
+        @media print {
+            body * { visibility: hidden; }
+            #ticket-print-content, #ticket-print-content * { visibility: visible; }
+            #ticket-print-content { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+        #ticket-print-content { display: none; }
+        .ticket-print { background: white; color: black; padding: 30px; max-width: 600px; margin: 0 auto; }
+        .ticket-print h1 { color: #007bff; text-align: center; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+        .ticket-print .ticket-info { margin: 20px 0; padding: 15px; border: 2px solid #ddd; border-radius: 10px; }
+        .ticket-print .ticket-info p { margin: 10px 0; font-size: 16px; }
+        .ticket-print .ticket-info strong { color: #007bff; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span>🚄</span> 
+            <span style="font-weight: 800; color: #00d2ff;">ON THE WAY</span>
+        </div>
+        <div class="nav-links">
+            <a href="/about" class="nav-link">About Us</a>
+            <span id="userEmailDisplay" style="color: #00ff88; font-weight: bold;">Loading...</span>
+        </div>
+    </nav>
+
+    <div class="glass-card">
+        <h2 style="margin-top:0;">Monthly Spend Analytics</h2>
+        <div class="analytics-box">
+            <canvas id="spendChart"></canvas>
+        </div>
+
+        <div class="pnr-tracker-box">
+            <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #00d2ff; display: flex; align-items: center; gap: 8px;">
+                <span>🔍</span> Live PNR Tracker
+            </h4>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="pnrInput" placeholder="Enter PNR (e.g. OTW123456)" 
+                       style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; border-radius: 8px; outline: none; font-size: 0.9rem;">
+                <button onclick="trackPNR()" 
+                        style="background: linear-gradient(45deg, #00ff88, #00d2ff); color: #000; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                    Track
+                </button>
+            </div>
+            <div id="pnrResult" style="margin-top: 12px; font-size: 0.85rem; display: none; padding: 10px; background: rgba(0,255,136,0.1); border-radius: 8px; color: #00ff88; border: 1px dashed rgba(0,255,136,0.3);">
+            </div>
+        </div>
+
+        <button onclick="window.location.href='/search'" class="btn-primary">🔍 SEARCH & BOOK TRAINS</button>
+
+        <div class="bookings-section">
+            <h3 style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">🎟️ Your Recent Tickets</h3>
+            <div id="my-bookings-container"></div>
+        </div>
+
+        <button onclick="handleLogout()" style="margin-top:20px; width: 100%; border: 1px solid #ff4b2b; color: #ff4b2b; background: transparent; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: bold;">🚪 LOGOUT</button>
+    </div>
+
+    <div id="chatbot-window">
+        <div class="chat-header"><span>OTW AI Assistant</span><span onclick="toggleChat()" style="cursor:pointer">✕</span></div>
+        <div id="chat-body"><div class="msg bot">Namaste! Main aapki kya madad kar sakta hoon?</div></div>
+        <div style="padding:10px; display:flex; gap:8px; background:rgba(0,0,0,0.3);">
+            <input type="text" id="chatInput" placeholder="Enter dabao message bhejne ke liye...">
+            <button onclick="sendChat()" style="background:#00d2ff; border:none; border-radius:10px; padding:10px;">➤</button>
+        </div>
+    </div>
+    <button onclick="toggleChat()" style="position:fixed; bottom:30px; right:30px; width:60px; height:60px; border-radius:50%; background:linear-gradient(45deg, #00ff88, #00d2ff); border:none; font-size:1.8rem; cursor:pointer; z-index:1001;">💬</button>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+
+    <script>
+        // Wait for auth.js to load, then get API key
+        let G_KEY;
+        
+        // Try to get API key from auth.js (loaded above)
+        if (typeof GEMINI_KEY !== 'undefined' && GEMINI_KEY) {
+            G_KEY = GEMINI_KEY;
+        } else {
+            // Fallback to hardcoded key
+            G_KEY = "AIzaSyBA-YeT9kg-4idfh6Qgh8_tUZnqz9_qjRk";
+        }
+        
+        // Verify API key is set
+        if (!G_KEY || G_KEY === "YOUR_NEW_API_KEY" || G_KEY.length < 20) {
+            console.error("Error: Gemini API key is not properly configured!");
+            console.error("Please get a valid API key from: https://makersuite.google.com/app/apikey");
+        } else {
+            console.log("Gemini API key loaded successfully");
+            console.log("API Key prefix:", G_KEY.substring(0, 10) + "...");
+        }
+        
+        // Function to test API connection
+        async function testAPIKey() {
+            if (!G_KEY || G_KEY === "YOUR_NEW_API_KEY") {
+                return { valid: false, error: "API key not configured" };
+            }
+            
+            try {
+                const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${G_KEY}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "Hello" }] }] })
+                });
+                
+                if (testRes.ok) {
+                    return { valid: true };
+                } else {
+                    const errorData = await testRes.json();
+                    return { valid: false, error: errorData.error?.message || `HTTP ${testRes.status}` };
+                }
+            } catch (e) {
+                return { valid: false, error: e.message };
+            }
+        }
+
+        // --- FIREBASE & BOOKING LOGIC ---
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                document.getElementById('userEmailDisplay').innerText = user.email;
+                fetchUserBookings(user.email);
+            } else { window.location.href = "/"; }
+        });
+
+        async function fetchUserBookings(email) {
+            const container = document.getElementById('my-bookings-container');
+            
+            if (!container) {
+                console.error("Container 'my-bookings-container' not found!");
+                return;
+            }
+            
+            console.log("Fetching bookings for:", email);
+            container.innerHTML = "<p style='text-align:center; opacity:0.7;'>Loading bookings...</p>";
+            
+            const db = firebase.firestore();
+            try {
+                const snapshot = await db.collection("bookings").where("userEmail", "==", email).get();
+                
+                console.log("Bookings found:", snapshot.size);
+                
+                if (snapshot.empty) {
+                    container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>No bookings found. Book your first ticket to get started! 🚄</p>";
+                    initGraph([0, 0, 0, 0]);
+                    return;
+                }
+                
+                let monthlyData = [0, 0, 0, 0]; 
+                container.innerHTML = "";
+
+                // Sort bookings by date (most recent first)
+                const bookingsArray = [];
+                snapshot.forEach(doc => {
+                    bookingsArray.push({ id: doc.id, data: doc.data() });
+                });
+                
+                bookingsArray.sort((a, b) => {
+                    const dateA = a.data.date || '';
+                    const dateB = b.data.date || '';
+                    return dateB.localeCompare(dateA); // Most recent first
+                });
+
+                bookingsArray.forEach(({ id: bookingId, data }) => {
+                    const fare = parseInt(data.fare) || 500;
+                    const date = data.date || "";
+
+                    if(date.includes("-01-")) monthlyData[0] += fare;
+                    else if(date.includes("-02-")) monthlyData[1] += fare;
+                    else if(date.includes("-03-")) monthlyData[2] += fare;
+                    else if(date.includes("-04-")) monthlyData[3] += fare;
+
+                    const card = document.createElement('div');
+                    card.className = 'booking-card';
+                    card.onclick = function() { this.classList.toggle('active'); };
+                    const statusColor = data.status === 'CONFIRMED' ? '#00ff88' : 
+                                       data.status === 'RAC' ? '#ffa500' : 
+                                       data.status === 'WAITLIST' ? '#ff4b2b' : '#888';
+                    const statusIcon = data.status === 'CONFIRMED' ? '✅' : 
+                                      data.status === 'RAC' ? '⚠️' : 
+                                      data.status === 'WAITLIST' ? '⏳' : '❌';
+                    const isCancelled = data.isCancelled === true;
+                    const canCancel = !isCancelled && new Date(data.date) > new Date();
+                    
+                    card.innerHTML = `
+                        <div class="ticket-header">
+                            <div><h4 style="margin:0; color:#00d2ff;">${data.trainName}</h4><span class="pnr-tag">PNR: ${data.pnr}</span></div>
+                            <div style="text-align:right;">
+                                <div style="color:${statusColor}; font-size:0.7rem; font-weight:bold;">${statusIcon} ${data.status || 'CONFIRMED'}</div>
+                                ${data.waitlistNumber ? `<div style="font-size:0.65rem; color:#ff4b2b;">WL: ${data.waitlistNumber}</div>` : ''}
+                                ${data.racSeat ? `<div style="font-size:0.65rem; color:#ffa500;">${data.racSeat}</div>` : ''}
+                                <div style="font-size:0.8rem; opacity:0.6;">${date}</div>
+                            </div>
+                        </div>
+                        <div class="ticket-details">
+                            <div class="detail-item"><span>📅 Journey Date:</span><span>${date}</span></div>
+                            ${data.source && data.destination ? `<div class="detail-item"><span>📍 Route:</span><span>${data.source} → ${data.destination}</span></div>` : ''}
+                            ${data.departureTime ? `<div class="detail-item"><span>🕐 Departure:</span><span>${data.departureTime}</span></div>` : ''}
+                            <div class="detail-item"><span>💺 Seats:</span><span>${Array.isArray(data.seats) ? data.seats.join(', ') : data.seats}</span></div>
+                            <div class="detail-item"><span>💰 Fare Paid:</span><span style="color:#00ff88;">₹${fare}</span></div>
+                            <div class="detail-item"><span>📧 Email:</span><span>${data.userEmail}</span></div>
+                            ${data.trainNumber ? `<div class="detail-item"><span>🚂 Train No:</span><span>${data.trainNumber}</span></div>` : ''}
+                            <div style="display:flex; gap:8px; margin-top:10px;">
+                                <button class="btn-primary" style="padding:8px; font-size:0.8rem; flex:1;" onclick="event.stopPropagation(); printTicket('${bookingId}', ${JSON.stringify(data).replace(/"/g, '&quot;')})">🖨️ PRINT</button>
+                                ${canCancel ? `<button style="padding:8px; font-size:0.8rem; flex:1; background:#ff4b2b; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="event.stopPropagation(); cancelTicket('${bookingId}', ${JSON.stringify(data).replace(/"/g, '&quot;')})">❌ CANCEL</button>` : ''}
+                                ${data.trainNumber ? `<button style="padding:8px; font-size:0.8rem; flex:1; background:#00d2ff; color:white; border:none; border-radius:8px; cursor:pointer;" onclick="event.stopPropagation(); trackTrain('${data.trainNumber}', '${data.date}')">🚄 TRACK</button>` : ''}
+                            ${(data.status === 'WAITLIST' || data.status === 'RAC') ? `<button style="padding:8px; font-size:0.8rem; flex:1; background:#ffa500; color:white; border:none; border-radius:8px; cursor:pointer; margin-top:5px;" onclick="event.stopPropagation(); checkWaitlistStatus('${bookingId}', '${data.pnr}')">🔄 CHECK STATUS</button>` : ''}
+                            </div>
+                        </div>`;
+                    container.appendChild(card);
+                });
+                
+                console.log("Bookings displayed:", bookingsArray.length);
+                initGraph(monthlyData);
+            } catch (e) { 
+                console.error("Error fetching bookings:", e);
+                container.innerHTML = `<p style='text-align:center; color:#ff4b2b; padding:20px;'>Error loading bookings. Please refresh the page.<br><small>${e.message}</small></p>`;
+            }
+        }
+
+        function initGraph(dataPoints) {
+            const ctx = document.getElementById('spendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr'],
+                    datasets: [{
+                        label: 'Expense (₹)',
+                        data: dataPoints,
+                        backgroundColor: '#00d2ff',
+                        borderRadius: 5
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    scales: { y: { ticks: { color: 'rgba(255,255,255,0.7)' } }, x: { ticks: { color: 'rgba(255,255,255,0.7)' } } }
+                }
+            });
+        }
+
+        // --- UPDATED: PNR TRACKING LOGIC ---
+        async function trackPNR() {
+            const pnr = document.getElementById('pnrInput').value.trim().toUpperCase();
+            const resultDiv = document.getElementById('pnrResult');
+            
+            if(!pnr) {
+                alert("Please enter a PNR number!");
+                return;
+            }
+            
+            // Validate PNR format (alphanumeric, 6-10 characters)
+            if(pnr.length < 6 || pnr.length > 10) {
+                alert("PNR should be between 6-10 characters!");
+                return;
+            }
+            
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<strong>Status:</strong> Searching for PNR ${pnr}...`;
+            
+            const db = firebase.firestore();
+            try {
+                const snapshot = await db.collection("bookings").where("pnr", "==", pnr).get();
+                
+                if(snapshot.empty) {
+                    resultDiv.innerHTML = `<p style='color:#ff4b2b; text-align:center;'>❌ PNR not found! Please check your PNR number.</p>`;
+                    return;
+                }
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    resultDiv.innerHTML = `
+                        <div style="background: rgba(0,255,136,0.15); padding: 12px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <strong style="color: #00ff88;">Status: ${data.status || 'CONFIRMED'}</strong>
+                            </div>
+                            <p style="margin: 5px 0;"><strong>Train:</strong> ${data.trainName}</p>
+                            <p style="margin: 5px 0;"><strong>Date:</strong> ${data.date}</p>
+                            <p style="margin: 5px 0;"><strong>Seats:</strong> ${Array.isArray(data.seats) ? data.seats.join(', ') : data.seats}</p>
+                            <p style="margin: 5px 0;"><strong>Fare:</strong> ₹${data.fare || 'N/A'}</p>
+                        </div>
+                    `;
+                });
+            } catch(e) {
+                console.error("Error:", e);
+                resultDiv.innerHTML = `<p style='color:#ff4b2b;'>Error fetching PNR data. Please try again.</p>`;
+            }
+        }
+
+        // Fallback responses when API is unavailable
+        function getFallbackResponse(userMsg) {
+            const msg = userMsg.toLowerCase();
+            
+            if (msg.includes('pnr') || msg.includes('ticket') || msg.includes('booking')) {
+                return "Aap apna PNR number dashboard mein enter karke check kar sakte hain. Ya phir mujhe PNR number bataiye, main details de dunga!";
+            }
+            if (msg.includes('train') || msg.includes('book')) {
+                return "Train booking ke liye 'Search & Book Trains' button par click karein. Main aapki madad kar sakta hoon!";
+            }
+            if (msg.includes('help') || msg.includes('madad')) {
+                return "Main aapki madad kar sakta hoon! Aap PNR check kar sakte hain, train book kar sakte hain, ya koi bhi sawaal pooch sakte hain.";
+            }
+            if (msg.includes('hello') || msg.includes('hi') || msg.includes('namaste')) {
+                return "Namaste! Main OTW Rail Bot hoon. Aapki kya madad kar sakta hoon?";
+            }
+            
+            return "Maaf kijiye, abhi main API se connect nahi kar pa raha. Aap dashboard mein directly PNR check kar sakte hain ya train book kar sakte hain.";
+        }
+
+        // --- UPDATED: GEMINI AI CHAT LOGIC WITH CONTEXT AWARENESS ---
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const body = document.getElementById('chat-body');
+            const userMsg = input.value.trim();
+            if(!userMsg) return;
+
+            body.innerHTML += `<div class="msg user">${userMsg}</div>`;
+            input.value = "";
+            body.scrollTop = body.scrollHeight;
+
+            // Loading state
+            const loadingId = "load-" + Date.now();
+            body.innerHTML += `<div class="msg bot" id="${loadingId}">Thinking... 🚄</div>`;
+
+            try {
+                // Check if user is asking about PNR
+                const pnrMatch = userMsg.match(/PNR[:\s]*([A-Z0-9]{6,10})/i) || userMsg.match(/([A-Z0-9]{6,10})/);
+                let contextData = "";
+                
+                if(pnrMatch) {
+                    const pnr = pnrMatch[1].toUpperCase();
+                    const db = firebase.firestore();
+                    const snapshot = await db.collection("bookings").where("pnr", "==", pnr).get();
+                    
+                    if(!snapshot.empty) {
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            contextData = `\n\nUser's Booking Details:\n- PNR: ${data.pnr}\n- Train: ${data.trainName}\n- Date: ${data.date}\n- Seats: ${Array.isArray(data.seats) ? data.seats.join(', ') : data.seats}\n- Status: ${data.status || 'CONFIRMED'}\n- Fare: ₹${data.fare || 'N/A'}`;
+                        });
+                    }
+                }
+                
+                // Get user's recent bookings for context
+                const user = firebase.auth().currentUser;
+                if(user) {
+                    const db = firebase.firestore();
+                    const bookingsSnapshot = await db.collection("bookings").where("userEmail", "==", user.email).limit(5).get();
+                    if(!bookingsSnapshot.empty) {
+                        let recentBookings = "\n\nUser's Recent Bookings:";
+                        bookingsSnapshot.forEach(doc => {
+                            const b = doc.data();
+                            recentBookings += `\n- ${b.trainName} (PNR: ${b.pnr}, Date: ${b.date})`;
+                        });
+                        contextData += recentBookings;
+                    }
+                }
+                
+                const prompt = `You are OTW Rail Bot, a helpful assistant for railway ticket booking. Reply in Hinglish (Hindi + English mix) in a friendly, conversational way. Keep responses concise (2-3 sentences max).${contextData}\n\nUser: ${userMsg}\n\nBot:`;
+                
+                let reply = null;
+                
+                // Method 1: Try Flask backend endpoint first (avoids CORS issues)
+                try {
+                    console.log("Trying Flask backend endpoint...");
+                    const backendRes = await fetch('/api/gemini-chat', {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message: prompt })
+                    });
+                    
+                    console.log("Backend response status:", backendRes.status);
+                    
+                    if (backendRes.ok) {
+                        const backendData = await backendRes.json();
+                        console.log("Backend response data:", backendData);
+                        if (backendData.success && backendData.reply) {
+                            reply = backendData.reply;
+                            console.log("✅ Successfully got response from backend");
+                        } else if (backendData.error) {
+                            console.log("Backend error:", backendData.error);
+                            throw new Error(backendData.error);
+                        }
+                    } else {
+                        const errorData = await backendRes.json().catch(() => ({}));
+                        console.log("Backend error response:", errorData);
+                        throw new Error(errorData.error || `Backend returned ${backendRes.status}`);
+                    }
+                } catch (e) {
+                    console.log("Backend endpoint error:", e.message);
+                    // Continue to try direct API
+                }
+                
+                // Method 2: Try direct API calls if backend failed
+                if (!reply) {
+                    const apiEndpoints = [
+                        { version: 'v1beta', model: 'gemini-pro' },
+                        { version: 'v1', model: 'gemini-pro' },
+                        { version: 'v1beta', model: 'gemini-1.5-pro' }
+                    ];
+                    
+                    let lastError = null;
+                    
+                    for (const endpoint of apiEndpoints) {
+                        try {
+                            const apiUrl = `https://generativelanguage.googleapis.com/${endpoint.version}/models/${endpoint.model}:generateContent?key=${G_KEY}`;
+                            console.log(`Trying direct API: ${endpoint.version}/${endpoint.model}...`);
+                            
+                            const res = await fetch(apiUrl, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                            });
+                            
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+                                    reply = data.candidates[0].content.parts[0].text;
+                                    console.log(`✅ Successfully connected using direct API: ${endpoint.version}/${endpoint.model}`);
+                                    break;
+                                }
+                            } else {
+                                const errorData = await res.json().catch(() => ({}));
+                                lastError = errorData.error?.message || `HTTP ${res.status}`;
+                                console.log(`❌ Failed ${endpoint.version}/${endpoint.model}:`, lastError);
+                            }
+                        } catch (e) {
+                            lastError = e.message;
+                            console.log(`❌ Error with ${endpoint.version}/${endpoint.model}:`, e.message);
+                        }
+                    }
+                    
+                    if (!reply) {
+                        throw new Error(lastError || "All API endpoints failed");
+                    }
+                }
+                
+                // Successfully got response - update the message
+                if (reply) {
+                    const loadingElement = document.getElementById(loadingId);
+                    if (loadingElement) {
+                        loadingElement.innerText = reply;
+                        loadingElement.style.color = '';
+                        loadingElement.style.opacity = '';
+                    }
+                } else {
+                    throw new Error("No response received from API");
+                }
+            } catch (e) {
+                console.error("=== CHAT ERROR DETAILS ===");
+                console.error("Error:", e);
+                console.error("Error message:", e.message);
+                console.error("Error stack:", e.stack);
+                console.error("API Key (first 10 chars):", G_KEY ? G_KEY.substring(0, 10) + "..." : "NOT SET");
+                console.error("==========================");
+                
+                const loadingElement = document.getElementById(loadingId);
+                if (!loadingElement) return;
+                
+                let errorDetails = e.message || "Unknown error";
+                
+                // Show user-friendly error with option to see details
+                let userMessage = "";
+                
+                // Determine error type and show appropriate message
+                if (errorDetails.includes("API_KEY") || errorDetails.includes("403") || errorDetails.includes("401") || errorDetails.includes("PERMISSION_DENIED") || errorDetails.includes("API key") || errorDetails.includes("API_KEY_INVALID")) {
+                    userMessage = "⚠️ API Key issue detected. The API key may be invalid or expired. Please check your Gemini API key.";
+                } else if (errorDetails.includes("not found for API version") || errorDetails.includes("is not supported") || errorDetails.includes("not found") || errorDetails.includes("Model")) {
+                    userMessage = "⚠️ Model not available. The API key might not have access to these models, or the models have been deprecated.";
+                } else if (errorDetails.includes("network") || errorDetails.includes("fetch") || errorDetails.includes("Failed to fetch") || errorDetails.includes("CORS")) {
+                    userMessage = "⚠️ Network error. Please check your internet connection.";
+                } else if (errorDetails.includes("quota") || errorDetails.includes("429") || errorDetails.includes("RESOURCE_EXHAUSTED")) {
+                    userMessage = "⚠️ API quota exceeded. Please try again later or check your API quota limits.";
+                } else if (errorDetails.includes("Backend returned") || errorDetails.includes("Backend error")) {
+                    userMessage = "⚠️ Backend server issue. Please restart the Flask server or check server logs.";
+                } else {
+                    userMessage = `⚠️ Connection issue: ${errorDetails.substring(0, 100)}`;
+                }
+                
+                // Use fallback response with helpful message
+                const fallback = getFallbackResponse(userMsg);
+                loadingElement.innerHTML = `${fallback}<br><br><div style="background:rgba(255,75,43,0.1); padding:10px; border-radius:8px; border-left:3px solid #ff4b2b; margin-top:10px;"><small style="color:#ff4b2b; font-weight:bold;">${userMessage}</small><br><small style="opacity:0.6; font-size:0.7rem; display:block; margin-top:5px;">Check browser console (F12) for detailed error logs</small></div>`;
+            }
+            body.scrollTop = body.scrollHeight;
+        }
+        
+        // Print ticket function
+        function printTicket(bookingId, bookingData) {
+            const printContent = document.createElement('div');
+            printContent.id = 'ticket-print-content';
+            printContent.className = 'ticket-print';
+            printContent.innerHTML = `
+                <h1>OTW RAILWAYS</h1>
+                <p style="text-align: center; margin-top: -10px;">E-Ticket Confirmation</p>
+                <div class="ticket-info">
+                    <p><strong>PNR Number:</strong> ${bookingData.pnr}</p>
+                    <p><strong>Train Name:</strong> ${bookingData.trainName}</p>
+                    <p><strong>Journey Date:</strong> ${bookingData.date}</p>
+                    <p><strong>Seat Numbers:</strong> ${Array.isArray(bookingData.seats) ? bookingData.seats.join(', ') : bookingData.seats}</p>
+                    <p><strong>Passenger Email:</strong> ${bookingData.userEmail}</p>
+                    <p><strong>Fare Paid:</strong> ₹${bookingData.fare || 'N/A'}</p>
+                    <p><strong>Status:</strong> <span style="color: green; font-weight: bold;">${bookingData.status || 'CONFIRMED'}</span></p>
+                </div>
+                <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px; font-size: 12px; color: #666;">
+                    <p>• Please carry original ID proof for verification.</p>
+                    <p>• This is a computer-generated ticket. No signature required.</p>
+                    <p>• For any queries, contact OTW Railways support.</p>
+                </div>
+            `;
+            document.body.appendChild(printContent);
+            
+            // Generate PDF using html2pdf
+            const opt = {
+                margin: 0.5,
+                filename: `OTW_Ticket_${bookingData.pnr}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            
+            html2pdf().set(opt).from(printContent).save().then(() => {
+                document.body.removeChild(printContent);
+            });
+        }
+
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') sendChat();
+        });
+        
+        // Add Enter key support for PNR input
+        document.getElementById('pnrInput').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') trackPNR();
+        });
+
+        function toggleChat() {
+            const win = document.getElementById('chatbot-window');
+            win.style.display = (win.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        function handleLogout() { firebase.auth().signOut().then(() => { window.location.href = "/"; }); }
+        
+        // --- TICKET CANCELLATION FUNCTION ---
+        async function cancelTicket(bookingId, bookingData) {
+            if (!confirm(`Are you sure you want to cancel this ticket?\nPNR: ${bookingData.pnr}\nTrain: ${bookingData.trainName}`)) {
+                return;
+            }
+            
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                alert("Please login to cancel tickets.");
+                return;
+            }
+            
+            try {
+                console.log("Cancelling ticket:", bookingId, bookingData);
+                
+                const response = await fetch('/api/cancel-ticket', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        bookingId: bookingId,
+                        pnr: bookingData.pnr,
+                        fare: bookingData.fare,
+                        date: bookingData.date,
+                        email: user.email,
+                        trainName: bookingData.trainName
+                    })
+                });
+                
+                console.log("Cancel response status:", response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("Cancel error response:", errorText);
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log("Cancel result:", result);
+                
+                if (result.success) {
+                    // Update Firebase
+                    const db = firebase.firestore();
+                    await db.collection("bookings").doc(bookingId).update({
+                        isCancelled: true,
+                        cancellationCharges: result.cancellationCharges,
+                        refundAmount: result.refundAmount,
+                        cancelledAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: "CANCELLED"
+                    });
+                    
+                    alert(`Ticket cancelled successfully!\n\nCancellation Charges: ₹${result.cancellationCharges}\nRefund Amount: ₹${result.refundAmount}\n\nRefund will be processed within 5-7 working days.`);
+                    
+                    // Refresh bookings
+                    fetchUserBookings(user.email);
+                } else {
+                    alert("Cancellation failed: " + (result.error || "Unknown error"));
+                }
+            } catch (e) {
+                console.error("Cancellation error:", e);
+                alert("Error cancelling ticket: " + e.message + "\n\nPlease check console for details.");
+            }
+        }
+        
+        // --- TRAIN TRACKING FUNCTION ---
+        function trackTrain(trainNumber, journeyDate) {
+            if (!trainNumber) {
+                alert("Train number not available for tracking.");
+                return;
+            }
+            
+            console.log("Tracking train:", trainNumber, "on date:", journeyDate);
+            
+            // Open train tracking page in same window
+            const url = `/track-train?train=${encodeURIComponent(trainNumber)}&date=${encodeURIComponent(journeyDate || new Date().toISOString().split('T')[0])}`;
+            console.log("Opening URL:", url);
+            window.location.href = url;
+        }
+        
+        // --- WAITLIST STATUS CHECK FUNCTION ---
+        async function checkWaitlistStatus(bookingId, pnr) {
+            try {
+                const response = await fetch('/api/update-waitlist-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bookingId, pnr })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update Firebase
+                    const db = firebase.firestore();
+                    const updateData = {
+                        status: result.status,
+                        lastStatusCheck: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    if (result.waitlistNumber !== null) {
+                        updateData.waitlistNumber = result.waitlistNumber;
+                    }
+                    if (result.racSeat) {
+                        updateData.racSeat = result.racSeat;
+                    }
+                    
+                    await db.collection("bookings").doc(bookingId).update(updateData);
+                    
+                    alert(result.message);
+                    
+                    // Refresh bookings
+                    const user = firebase.auth().currentUser;
+                    if (user) fetchUserBookings(user.email);
+                }
+            } catch (e) {
+                console.error("Waitlist check error:", e);
+            }
+        }
+        
+        // Auto-check waitlist status every 5 minutes for waitlist/RAC tickets
+        setInterval(() => {
+            const user = firebase.auth().currentUser;
+            if (!user) return;
+            
+            const db = firebase.firestore();
+            db.collection("bookings")
+                .where("userEmail", "==", user.email)
+                .where("isCancelled", "==", false)
+                .get()
+                .then(snapshot => {
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.status === "WAITLIST" || data.status === "RAC") {
+                            checkWaitlistStatus(doc.id, data.pnr);
+                        }
+                    });
+                });
+        }, 300000); // Check every 5 minutes
+    </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - OTW Rail</title>
+    <style>
+        /* --- 1. Welcome Overlay Styles --- */
+        #welcome-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #050505;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+            transition: opacity 1s ease-in-out, visibility 1s;
+        }
+
+        .welcome-content { text-align: center; }
+
+        .train-icon {
+            font-size: 50px;
+            animation: drive 2s infinite ease-in-out;
+            display: inline-block;
+        }
+
+        .welcome-text {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #00d2ff;
+            letter-spacing: 8px;
+            margin-top: 15px;
+            text-shadow: 0 0 15px rgba(0, 210, 255, 0.6);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .load-bar {
+            width: 250px; height: 3px;
+            background: rgba(255,255,255,0.1);
+            margin: 25px auto; border-radius: 10px; overflow: hidden;
+        }
+
+        .load-progress {
+            width: 0%; height: 100%;
+            background: linear-gradient(to right, #00ff88, #00d2ff);
+            box-shadow: 0 0 10px #00ff88;
+            animation: fillProgress 2.5s forwards;
+        }
+
+        @keyframes drive {
+            0% { transform: translateX(-30px); opacity: 0; }
+            50% { transform: translateX(0px); opacity: 1; }
+            100% { transform: translateX(30px); opacity: 0; }
+        }
+
+        @keyframes fillProgress { to { width: 100%; } }
+
+        .fade-out { opacity: 0; visibility: hidden; }
+
+        /* --- 2. Original Login Styles --- */
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), 
+                        url("{{ url_for('static', filename='images/loginpage.jpg') }}") no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Segoe UI', sans-serif;
+            color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;
+            overflow: hidden; /* Overlay ke time scroll na ho */
+        }
+        .auth-card {
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px);
+            padding: 40px; border-radius: 20px; width: 350px; text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            animation: cardPopup 1s ease-out 2.8s both; /* Overlay ke baad aayega */
+        }
+        
+        @keyframes cardPopup {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 { letter-spacing: 2px; margin-bottom: 30px; }
+        input {
+            width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1);
+            color: white; outline: none; box-sizing: border-box; font-size: 1rem;
+        }
+        .btn {
+            width: 100%; padding: 12px; border-radius: 10px; border: none;
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5); color: white;
+            font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 1rem;
+        }
+        .btn:hover { opacity: 0.9; transform: scale(1.02); }
+    </style>
+</head>
+<body>
+
+    <div id="welcome-overlay">
+        <div class="welcome-content">
+            <div class="train-icon">🚄</div>
+            <div class="welcome-text">ON THE WAY</div>
+            <div class="load-bar">
+                <div class="load-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-card">
+        <h2 style="color: #00d2ff;">LOGIN</h2>
+        
+        <input type="email" id="loginEmail" placeholder="Email Address">
+        <input type="password" id="loginPassword" placeholder="Password">
+        
+        <button class="btn" id="loginBtn">Sign In</button>
+        
+        <a href="/register" style="display: block; margin-top: 20px; color: #00ff88; text-decoration: none; font-size: 0.9rem;">New User? Register</a>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    
+    <script>
+        // 1. Overlay Control
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('welcome-overlay').classList.add('fade-out');
+                document.body.style.overflow = "auto";
+            }, 3000); // 3 seconds tak chalega animation
+        });
+
+        // 2. Login Button Trigger
+        document.getElementById('loginBtn').onclick = function() {
+            if(typeof login === "function") {
+                login(); 
+            } else {
+                alert("Technical Error: Auth script not linked properly!");
+            }
+        };
+        
+        // 3. Enter key support for login
+        document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+            if(e.key === 'Enter') {
+                if(typeof login === "function") {
+                    login();
+                }
+            }
+        });
+        
+        document.getElementById('loginEmail').addEventListener('keypress', function(e) {
+            if(e.key === 'Enter') {
+                document.getElementById('loginPassword').focus();
+            }
+        });
+    </script>
+</body>
+</html>

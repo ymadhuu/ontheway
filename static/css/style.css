@@ -1,0 +1,340 @@
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    /* Modern Dark Gradient Background */
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    overflow-x: hidden;
+}
+
+/* Glassmorphism Card Style */
+.glass-card {
+    background: rgba(255, 255, 255, 0.05); /* Semi-transparent */
+    backdrop-filter: blur(15px);           /* Frosted Glass effect */
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 40px;
+    width: 380px;
+    text-align: center;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: transform 0.3s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-5px);
+}
+
+h1, h2 {
+    margin-bottom: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #00d2ff; /* Modern Accent Color */
+}
+
+p {
+    font-size: 0.9rem;
+    margin-bottom: 25px;
+    color: #ccc;
+}
+
+/* Input Fields Styling */
+.input-group {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+input {
+    width: 100%;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: white;
+    outline: none;
+    font-size: 1rem;
+    transition: 0.3s;
+}
+
+input:focus {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #00d2ff;
+}
+
+input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Button Styling */
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(90deg, #3a7bd5, #00d2ff);
+    transform: scale(1.02);
+}
+
+/* Links and Footer */
+.footer-links {
+    margin-top: 20px;
+    font-size: 0.85rem;
+}
+
+.footer-links a {
+    color: #00d2ff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.footer-links a:hover {
+    text-decoration: underline;
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 1s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Mobile Responsive */
+@media (max-width: 480px) {
+    .glass-card {
+        width: 90%;
+        padding: 30px 20px;
+    }
+}
+/* Navbar Styling */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 50px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Logo ka Icon (Ek stylish box) */
+.logo-icon {
+    background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+    color: white;
+    font-weight: bold;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
+}
+
+/* Brand Name Styling */
+.brand-name {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+}
+
+.user-info {
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+.logout-link {
+    background: transparent;
+    border: 1px solid #ff4b2b;
+    color: #ff4b2b;
+    padding: 5px 15px;
+    border-radius: 5px;
+    margin-left: 15px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.logout-link:hover {
+    background: #ff4b2b;
+    color: white;
+}
+
+/* Dashboard card ko thoda niche shift karein navbar ki wajah se */
+.glass-card {
+    margin-top: 100px;
+}
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.train-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: 0.4s ease;
+    color: white;
+}
+
+.train-card:hover {
+    transform: translateY(-10px);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+/* --- PNR STATUS BADGES --- */
+.badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+/* Confirmed Status (Green) */
+.cnf {
+    background: rgba(0, 255, 136, 0.1);
+    color: #00ff88;
+    border: 1px solid #00ff88;
+}
+
+/* Waiting List / RAC Status (Red/Orange) */
+.wl {
+    background: rgba(255, 75, 43, 0.1);
+    color: #ff4b2b;
+    border: 1px solid #ff4b2b;
+}
+
+/* --- CHATBOT UI ENHANCEMENTS --- */
+.chatbot-window {
+    display: none;
+    flex-direction: column;
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    width: 350px;
+    max-height: 500px;
+    background: #121212;
+    border: 1px solid #333;
+    border-radius: 20px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+    overflow: hidden;
+    z-index: 9999;
+}
+
+.chatbot-header {
+    background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+    color: #000;
+    padding: 15px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    background: #0f0f0f;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-input-area {
+    padding: 15px;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input-area input {
+    flex: 1;
+    background: #000;
+    border: 1px solid #444;
+    padding: 10px;
+    border-radius: 8px;
+    color: white;
+    outline: none;
+}
+
+/* --- FLOATING BUTTON (FAB) --- */
+.fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: #00d2ff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 5px 20px rgba(0, 210, 255, 0.4);
+    transition: transform 0.3s ease;
+    z-index: 10000;
+}
+
+.fab:hover {
+    transform: scale(1.1);
+}
+/* Chat messages ko readable banane ke liye */
+#chat-content div span {
+    max-width: 80%;
+    word-wrap: break-word;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+body {
+    /* Background setup - checkout.jpg ke liye */
+    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
+                url("{{ url_for('static', filename='images/checkout.jpg') }}") no-repeat center center fixed;
+    background-size: cover;
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+    min-height: 100vh;
+}

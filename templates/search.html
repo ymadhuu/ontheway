@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Trains - OTW</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), 
+                        url("{{ url_for('static', filename='images/searchpage.jpg') }}") no-repeat center center fixed;
+            background-size: cover;
+            margin: 0; font-family: 'Segoe UI', sans-serif; color: white; min-height: 100vh;
+        }
+
+        .main-content { margin-top: 120px; padding: 20px; max-width: 1000px; margin: 120px auto 0; }
+
+        .booking-controls { 
+            background: rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 20px; 
+            text-align: center; margin-bottom: 30px; backdrop-filter: blur(15px);
+            display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .booking-controls input {
+            padding: 14px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.3);
+            outline: none; min-width: 200px; font-size: 1rem; background: rgba(255, 255, 255, 0.1); color: white;
+        }
+
+        .train-card {
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
+            border-radius: 15px; padding: 25px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.1); transition: 0.3s;
+        }
+        .train-card:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.15); }
+
+        .train-name { font-size: 1.5rem; color: #00d2ff; font-weight: bold; }
+        .price-tag { font-size: 1.7rem; color: #00ff88; font-weight: bold; }
+        
+        .book-btn {
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            color: white; border: none; padding: 12px 25px; border-radius: 8px; 
+            cursor: pointer; font-weight: bold; text-transform: uppercase;
+        }
+
+        #seat-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #121212; padding: 30px; border-radius: 25px; width: 90%; max-width: 450px;
+            text-align: center; border: 1px solid rgba(0, 210, 255, 0.3);
+        }
+        .seat-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 20px 0;
+            max-height: 300px; overflow-y: auto; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 15px;
+        }
+        
+        .seat {
+            width: 50px; height: 50px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 0.8rem; transition: 0.2s;
+        }
+        .seat.occupied { background: #333 !important; color: #666; border: none; cursor: not-allowed; }
+        .seat.selected { background: #00ff88 !important; color: black; font-weight: bold; border-color: #00ff88; box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); }
+        
+        .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; font-size: 0.75rem; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+
+        .loader-text { animation: pulse 1.5s infinite; text-align: center; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar" style="padding: 15px 50px; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); position: fixed; top: 0; width: 100%; z-index: 1000; box-sizing: border-box; display: flex; justify-content: space-between;">
+        <div style="font-weight: 800; color: #00d2ff; font-size: 1.5rem;">🚄 ON THE WAY</div>
+        <a href="/dashboard" style="color: white; text-decoration: none; font-weight: bold;">Dashboard</a>
+    </nav>
+
+    <div class="main-content">
+        <h1 style="text-align: center; margin-bottom: 30px;">Search Your Journey</h1>
+        
+        <div class="booking-controls">
+            <input type="text" id="from-station" placeholder="Source (e.g. Mumbai)">
+            <span style="color: #00ff88;">➔</span>
+            <input type="text" id="to-station" placeholder="Destination (e.g. Delhi)">
+            <input type="date" id="journey-date">
+            <button class="book-btn" style="background: #00ff88; color: #000;" onclick="loadTrainsAsCards()">FIND TRAINS</button>
+        </div>
+
+        <div id="train-cards-container"></div> 
+    </div>
+
+    <div id="seat-modal">
+        <div class="modal-content">
+            <h2 id="modal-train-name" style="color: #00d2ff;">Select Seats</h2>
+            <div class="legend">
+                <div class="legend-item"><div class="seat"></div> Free</div>
+                <div class="legend-item"><div class="seat occupied"></div> Booked</div>
+                <div class="legend-item"><div class="seat selected"></div> Selected</div>
+            </div>
+            <div class="seat-grid" id="seat-grid"></div>
+            <div id="booking-summary" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;">
+                <p id="selected-info" style="margin:0;">Seats: None</p>
+                <h3 id="total-price-display" style="margin: 5px 0 0 0; color: #00ff88;">Total: ₹0</h3>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="closeModal()" style="flex:1; padding: 12px; border-radius: 10px; border: 1px solid #444; background: transparent; color: white; cursor: pointer;">CANCEL</button>
+                <button onclick="confirmSeats()" id="confirm-btn" style="flex:2; padding: 12px; border-radius: 10px; border: none; background: #00ff88; color: black; font-weight: bold; cursor: pointer; opacity: 0.5;" disabled>PROCEED</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+
+    <script>
+        document.getElementById('journey-date').valueAsDate = new Date();
+        let selectedSeats = [];
+        let currentBookingData = null;
+
+        async function loadTrainsAsCards() {
+            const container = document.getElementById('train-cards-container');
+            const fromInput = document.getElementById('from-station').value.trim().toLowerCase();
+            const toInput = document.getElementById('to-station').value.trim().toLowerCase();
+            const date = document.getElementById('journey-date').value;
+
+            container.innerHTML = "<p class='loader-text'>Searching tracks...</p>";
+
+            try {
+                // IMPORTANT: Ensure Firebase is initialized in auth.js before this
+                const db = firebase.firestore();
+                const snapshot = await db.collection("trains").get();
+                
+                if (snapshot.empty) {
+                    container.innerHTML = "<p>No trains available in database.</p>";
+                    return;
+                }
+
+                container.innerHTML = "";
+                let found = false;
+
+                snapshot.forEach(doc => {
+                    const t = doc.data();
+                    // Basic check to ensure fields exist
+                    const source = (t.source || "").toLowerCase();
+                    const dest = (t.destination || "").toLowerCase();
+
+                    if (source.includes(fromInput) && dest.includes(toInput)) {
+                        found = true;
+                        container.innerHTML += `
+                            <div class="train-card">
+                                <div>
+                                    <div class="train-name">${t.name || 'Express'}</div>
+                                    <div style="color:#aaa; font-size: 0.9rem;">📍 ${t.source} ➔ ${t.destination} | 🕒 ${t.departure || 'N/A'}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="price-tag">₹${t.fare || 0}</div>
+                                    <button class="book-btn" onclick="openSeatModal('${t.name}', ${t.fare}, '${date}', '${t.source || 'Mumbai'}', '${t.destination || 'Delhi'}')">Select Seats</button>
+                                </div>
+                            </div>`;
+                    }
+                });
+
+                if (!found) container.innerHTML = "<p style='text-align:center;'>No trains found for this route.</p>";
+
+            } catch (err) { 
+                console.error("Firestore Error:", err);
+                container.innerHTML = `<div style="color: #ff4444; text-align:center;">
+                    <p>Error Loading Trains: ${err.message}</p>
+                    <small>Check Console (F12) for details.</small>
+                </div>`; 
+            }
+        }
+
+        // --- SEAT MODAL LOGIC ---
+        function openSeatModal(name, fare, date, source, destination) {
+            currentBookingData = { name, fare, date, source: source || 'Mumbai', destination: destination || 'Delhi' };
+            selectedSeats = [];
+            document.getElementById('modal-train-name').innerText = name;
+            document.getElementById('seat-modal').style.display = 'flex';
+            const grid = document.getElementById('seat-grid');
+            grid.innerHTML = "";
+            const bookedIndices = [3, 7, 15, 22]; 
+
+            for (let i = 1; i <= 40; i++) {
+                const seat = document.createElement('div');
+                seat.className = 'seat';
+                seat.innerText = i;
+                if (bookedIndices.includes(i)) seat.classList.add('occupied');
+                else seat.onclick = () => toggleSeat(i, seat);
+                grid.appendChild(seat);
+            }
+            updateSummary();
+        }
+
+        function toggleSeat(num, el) {
+            if (selectedSeats.includes(num)) {
+                selectedSeats = selectedSeats.filter(s => s !== num);
+                el.classList.remove('selected');
+            } else {
+                selectedSeats.push(num);
+                el.classList.add('selected');
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const info = document.getElementById('selected-info');
+            const priceDisp = document.getElementById('total-price-display');
+            const btn = document.getElementById('confirm-btn');
+            const total = selectedSeats.length * (currentBookingData ? currentBookingData.fare : 0);
+            info.innerText = selectedSeats.length > 0 ? `Selected: ${selectedSeats.sort((a,b)=>a-b).join(', ')}` : "Seats: None";
+            priceDisp.innerText = `Total: ₹${total}`;
+            btn.disabled = selectedSeats.length === 0;
+            btn.style.opacity = selectedSeats.length === 0 ? "0.5" : "1";
+        }
+
+        function closeModal() { document.getElementById('seat-modal').style.display = 'none'; }
+
+        function confirmSeats() {
+            const finalFare = selectedSeats.length * currentBookingData.fare;
+            localStorage.setItem('pendingBooking', JSON.stringify({
+                ...currentBookingData,
+                seats: selectedSeats.join(', '),
+                totalFare: finalFare,
+                departureTime: "10:00",
+                arrivalTime: "18:00"
+            }));
+            window.location.href = "/checkout";
+        }
+    </script>
+</body>
+</html>

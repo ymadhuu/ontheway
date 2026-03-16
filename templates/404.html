@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>404 - Lost in Tracks</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
+                        url("{{ url_for('static', filename='images/dashboard.jpg') }}") no-repeat center center fixed;
+            background-size: cover;
+            color: white; font-family: 'Segoe UI', sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; margin: 0; text-align: center;
+        }
+
+        .error-container {
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px);
+            padding: 50px; border-radius: 30px; border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 45px rgba(0,0,0,0.6);
+        }
+
+        h1 { font-size: 8rem; margin: 0; color: #ff4b2b; text-shadow: 0 0 20px rgba(255, 75, 43, 0.5); }
+        h2 { color: #00d2ff; margin-bottom: 20px; }
+        p { opacity: 0.8; margin-bottom: 30px; }
+
+        .btn-back {
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            color: white; text-decoration: none; padding: 15px 30px;
+            border-radius: 12px; font-weight: bold; transition: 0.3s;
+        }
+        .btn-back:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(0, 210, 255, 0.4); }
+
+        .train-animation { font-size: 3rem; margin-top: 20px; animation: moveTrain 3s linear infinite; }
+        @keyframes moveTrain {
+            0% { transform: translateX(-100px); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(100px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="error-container">
+        <div class="train-animation">🚄</div>
+        <h1>404</h1>
+        <h2>Gaadi Chhoot Gayi, Bhai!</h2>
+        <p>Ye rasta (URL) galat hai ya page delete ho gaya hai.</p>
+        <a href="/dashboard" class="btn-back">WAPAS DASHBOARD PAR CHALO</a>
+    </div>
+
+</body>
+</html>

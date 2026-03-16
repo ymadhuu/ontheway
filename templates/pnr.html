@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PNR Status - OTW Rail</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        body { background: #0f0c29; color: white; font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; }
+        .pnr-card { background: #1a1a2e; padding: 30px; border-radius: 15px; width: 450px; border: 1px solid #333; text-align: center; }
+        .input-group { margin: 20px 0; }
+        input { padding: 12px; width: 80%; border-radius: 8px; border: none; font-size: 1rem; text-transform: uppercase; outline: none; }
+        .btn { background: #00ff88; color: black; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn:hover { background: #00cc6e; transform: scale(1.05); }
+        
+        /* Result area jo screen par dikhega */
+        #result { margin-top: 20px; text-align: left; background: #252545; padding: 15px; border-radius: 10px; display: none; line-height: 1.6; }
+        .status-badge { background: #00ff88; color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; float: right; font-weight: bold; }
+
+        /* 2. Hidden Ticket Style (Sirf PDF ke liye) */
+        #ticket-for-pdf {
+            display: none; /* Screen par nahi dikhega */
+            background: white;
+            color: black;
+            padding: 30px;
+            width: 500px;
+            border: 2px solid #333;
+        }
+        .pdf-btn {
+            background: #ff4b2b; color: white; border: none; padding: 10px 20px; 
+            border-radius: 8px; cursor: pointer; margin-top: 15px; display: none; width: 100%; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="pnr-card">
+    <h2 style="color: #00d2ff;">Check PNR Status</h2>
+    <div class="input-group">
+        <input type="text" id="pnrInput" placeholder="Enter PNR Number (e.g. OTW...)">
+        <button class="btn" onclick="fetchPNR()">GET STATUS</button>
+    </div>
+
+    <div id="result"></div>
+    
+    <button id="downloadBtn" class="pdf-btn" onclick="generatePDF()">📥 DOWNLOAD TICKET PDF</button>
+
+    <br><br>
+    <a href="/dashboard" style="color: #888; text-decoration: none; font-size: 0.8rem;">← Back to Dashboard</a>
+</div>
+
+<div id="hidden-ticket-wrap" style="position: absolute; left: -9999px;">
+    <div id="ticket-for-pdf">
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+            <h1 style="margin: 0; color: #007bff;">OTW RAILWAYS</h1>
+            <p style="margin: 0;">E-Ticket Confirmation</p>
+        </div>
+        <div id="pdf-content">
+            </div>
+        <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px; font-size: 12px;">
+            <p>• Please carry original ID proof.<br>• This is a computer-generated ticket.</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="/static/js/auth.js"></script>
+
+<script>
+    async function fetchPNR() {
+        const db = firebase.firestore(); 
+        const pnr = document.getElementById('pnrInput').value.trim().toUpperCase();
+        const resDiv = document.getElementById('result');
+        const dlBtn = document.getElementById('downloadBtn');
+        const pdfContent = document.getElementById('pdf-content');
+        
+        if(!pnr) {
+            alert("Bhai, PNR toh daalo!");
+            return;
+        }
+
+        resDiv.style.display = 'block';
+        resDiv.innerHTML = "Searching...";
+        dlBtn.style.display = 'none';
+
+        try {
+            const snapshot = await db.collection("bookings").where("pnr", "==", pnr).get();
+            
+            if(snapshot.empty) {
+                resDiv.innerHTML = "<p style='color:#ff4b2b; text-align:center;'>❌ PNR not found!</p>";
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                
+                // Screen display
+                resDiv.innerHTML = `
+                    <div class="status-badge">${data.status || 'CONFIRMED'}</div>
+                    <h3 style="color:#00d2ff; margin:0;">${data.trainName}</h3>
+                    <p style="margin: 10px 0 5px 0;">📅 <b>Date:</b> ${data.date}</p>
+                    <p style="margin: 5px 0;">💺 <b>Seats:</b> ${Array.isArray(data.seats) ? data.seats.join(', ') : data.seats}</p>
+                    <p style="margin: 5px 0;">📧 <b>Email:</b> ${data.userEmail}</p>
+                `;
+
+                // PDF content fill karo (Professional look ke liye)
+                pdfContent.innerHTML = `
+                    <p><strong>PNR Number:</strong> ${pnr}</p>
+                    <p><strong>Train:</strong> ${data.trainName}</p>
+                    <p><strong>Journey Date:</strong> ${data.date}</p>
+                    <p><strong>Passenger Email:</strong> ${data.userEmail}</p>
+                    <p><strong>Seat Numbers:</strong> ${Array.isArray(data.seats) ? data.seats.join(', ') : data.seats}</p>
+                    <p><strong>Status:</strong> <span style="color:green;">CONFIRMED</span></p>
+                `;
+
+                dlBtn.style.display = 'block'; // Show download button
+            });
+        } catch(e) {
+            console.error("Error:", e);
+            resDiv.innerHTML = "<p style='color:red;'>Error fetching data.</p>";
+        }
+    }
+
+    // PDF Generate Function
+    function generatePDF() {
+        const element = document.getElementById('ticket-for-pdf');
+        element.style.display = 'block'; // Temporarily show for capture
+        
+        const pnr = document.getElementById('pnrInput').value.trim();
+        const opt = {
+            margin:       0.5,
+            filename:     `OTW_Ticket_${pnr}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            element.style.display = 'none'; // Hide again after saving
+        });
+    }
+</script>
+</body>
+</html>

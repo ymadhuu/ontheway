@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Checkout - OTW Rail</title>
+    <style>
+        body { 
+            /* Background image ab bina kaale overlay ke dikhegi */
+            background: url("{{ url_for('static', filename='images/checkout3.jpg') }}") no-repeat center center fixed;
+            background-size: cover; 
+            color: white; 
+            font-family: 'Segoe UI', sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            overflow: hidden;
+        }
+
+        /* Glassmorphism Card Logic */
+        .card { 
+            background: rgba(255, 255, 255, 0.03); /* Extremely transparent */
+            backdrop-filter: blur(15px) saturate(150%); /* Peeche ki image blur aur vibrant dikhegi */
+            -webkit-backdrop-filter: blur(15px) saturate(150%);
+            padding: 30px; 
+            border-radius: 30px; 
+            width: 90%; 
+            max-width: 480px; 
+            text-align: center; 
+            border: 1px solid rgba(255, 255, 255, 0.2); /* Shiny border */
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .summary-box { 
+            text-align: left; 
+            background: rgba(0, 0, 0, 0.3); /* Summary thoda dark taaki text saaf dikhe */
+            padding: 20px; 
+            border-radius: 15px; 
+            margin-bottom: 20px; 
+            border-left: 5px solid #00d2ff; 
+        }
+        
+        .info-row { margin: 10px 0; font-size: 1rem; color: #fff; }
+        .info-row b { color: #00d2ff; }
+
+        .pay-tabs { display: flex; gap: 10px; margin: 20px 0; }
+        .tab-btn { 
+            flex: 1; 
+            padding: 12px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            background: rgba(255,255,255,0.1); 
+            color: white; 
+            cursor: pointer; 
+            transition: 0.3s;
+        }
+        .tab-btn.active { background: #00d2ff; color: black; font-weight: bold; }
+
+        .payment-form { 
+            background: rgba(255, 255, 255, 0.05); 
+            padding: 20px; 
+            border-radius: 15px; 
+            border: 1px solid rgba(255,255,255,0.1); 
+        }
+
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 8px 0; 
+            border-radius: 10px; 
+            border: none; 
+            background: rgba(255, 255, 255, 0.9); /* Inpout saaf dikhne ke liye white */
+            color: black; 
+            box-sizing: border-box; 
+        }
+
+        .btn { 
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5); 
+            color: white; 
+            border: none; 
+            padding: 15px; 
+            width: 100%; 
+            border-radius: 12px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            margin-top: 15px; 
+            transition: 0.3s; 
+            font-size: 1rem;
+            box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 210, 255, 0.5); }
+
+        #success-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; 
+            justify-content: center; align-items: center; text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card" id="checkoutCard">
+    <h2 style="color: #00d2ff; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,210,255,0.3);">Confirm Booking</h2>
+    
+    <div class="summary-box" id="summary">
+        <p>Fetching your journey...</p>
+    </div>
+
+    <div id="payment-stage">
+        <div class="pay-tabs">
+            <button class="tab-btn active" id="upi-tab" onclick="switchPay('upi')">📱 UPI / QR</button>
+            <button class="tab-btn" id="card-tab" onclick="switchPay('card')">💳 Card</button>
+        </div>
+
+        <div id="upi-area" class="payment-form">
+            <div id="qr-img-box" style="margin-bottom: 10px;"></div>
+            <p style="font-size: 0.8rem; color: #aaa;">Scan to Pay with any UPI App</p>
+        </div>
+
+        <div id="card-area" class="payment-form" style="display: none;">
+            <input type="text" placeholder="Cardholder Name">
+            <input type="text" placeholder="16-Digit Card Number" maxlength="16">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" placeholder="MM/YY" style="flex: 2;">
+                <input type="password" placeholder="CVV" maxlength="3" style="flex: 1;">
+            </div>
+        </div>
+
+        <button id="finishBtn" class="btn" onclick="finishBooking()">PAY & CONFIRM TICKET</button>
+        <button class="btn" style="background:transparent; border:1px solid rgba(255,255,255,0.2); margin-top:10px; font-size: 0.8rem;" onclick="window.history.back()">← CHANGE SEATS</button>
+    </div>
+</div>
+
+<div id="success-overlay">
+    <div style="font-size: 5rem;">✅</div>
+    <h1 style="color: #fff; font-size: 2.5rem;">Tickets Booked!</h1>
+    <p id="congrats-msg" style="color: #00d2ff;"></p>
+    <div style="font-size: 6rem; margin: 20px 0;">🚄</div>
+    <h2 style="color: #00ff88; letter-spacing: 5px;">HAPPY JOURNEY</h2>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="{{ url_for('static', filename='js/auth.js') }}?v=1.1"></script>
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+
+<script>
+    const bookingData = JSON.parse(localStorage.getItem('pendingBooking'));
+
+    function initCheckout() {
+        if (!bookingData) {
+            window.location.href = "/search";
+            return;
+        }
+
+        const totalAmt = bookingData.totalFare || bookingData.fare;
+        
+        document.getElementById('summary').innerHTML = `
+            <div style="font-weight:bold; color:#00d2ff; font-size:1.4rem;">${bookingData.name}</div>
+            <div class="info-row">📅 <b>Date:</b> ${bookingData.date}</div>
+            <div class="info-row">💺 <b>Seats:</b> <span style="color:#00ff88;">${bookingData.seats}</span></div>
+            <div style="color:#00ff88; font-weight:bold; margin-top:15px; font-size: 1.6rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                Total: ₹${totalAmt}
+            </div>
+        `;
+
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=ymadhu23it@student.mes.ac.in&pn=OTWRail&am=${totalAmt}&cu=INR`;
+        document.getElementById('qr-img-box').innerHTML = `<img src="${qrUrl}" style="border:5px solid white; border-radius:10px; width:140px;">`;
+    }
+
+    function switchPay(method) {
+        document.getElementById('upi-area').style.display = (method === 'upi') ? 'block' : 'none';
+        document.getElementById('card-area').style.display = (method === 'card') ? 'block' : 'none';
+        document.getElementById('upi-tab').classList.toggle('active', method === 'upi');
+        document.getElementById('card-tab').classList.toggle('active', method === 'card');
+    }
+
+    async function finishBooking() {
+        const user = firebase.auth().currentUser;
+        if (!user) return alert("Login first!");
+
+        const btn = document.getElementById('finishBtn');
+        btn.innerText = "Processing...";
+        btn.disabled = true;
+
+        const pnr = "OTW" + Math.random().toString(36).substr(2, 6).toUpperCase();
+        // Determine booking status (CONFIRMED, RAC, WAITLIST)
+        let bookingStatus = "CONFIRMED";
+        const randomStatus = Math.random();
+        if (randomStatus < 0.1) {
+            bookingStatus = "WAITLIST";
+        } else if (randomStatus < 0.2) {
+            bookingStatus = "RAC";
+        }
+        
+        const bookingDetails = {
+            userEmail: user.email, 
+            trainName: bookingData.name, 
+            fare: bookingData.totalFare || bookingData.fare,
+            seats: bookingData.seats, 
+            pnr: pnr, 
+            date: bookingData.date, 
+            status: bookingStatus,
+            waitlistNumber: bookingStatus === "WAITLIST" ? Math.floor(Math.random() * 50) + 1 : null,
+            racSeat: bookingStatus === "RAC" ? "RAC" + (Math.floor(Math.random() * 10) + 1) : null,
+            isCancelled: false,
+            cancellationCharges: 0,
+            trainNumber: bookingData.name.match(/\d+/)?.[0] || "12345",
+            source: bookingData.source || "Mumbai",
+            destination: bookingData.destination || "Delhi",
+            departureTime: bookingData.departureTime || "10:00",
+            arrivalTime: bookingData.arrivalTime || "18:00",
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        try {
+            // Save booking to Firebase
+            await firebase.firestore().collection("bookings").add(bookingDetails);
+
+            // Send confirmation email via Flask backend
+            try {
+                const emailResponse = await fetch('/api/book-ticket', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: user.email,
+                        trainName: bookingData.name,
+                        pnr: pnr,
+                        amount: bookingData.totalFare || bookingData.fare,
+                        seat: Array.isArray(bookingData.seats) ? bookingData.seats.join(', ') : bookingData.seats,
+                        date: bookingData.date
+                    })
+                });
+                
+                const emailResult = await emailResponse.json();
+                if(emailResult.status === "Success") {
+                    console.log("Confirmation email sent successfully!");
+                } else {
+                    console.log("Email sending failed, but booking is confirmed.");
+                }
+            } catch(emailError) {
+                console.error("Email error:", emailError);
+                // Don't block booking if email fails
+            }
+
+            document.getElementById('congrats-msg').innerText = `PNR: ${pnr} confirmed for ${user.email}. Confirmation email sent!`;
+            document.getElementById('checkoutCard').style.display = 'none';
+            document.getElementById('success-overlay').style.display = 'flex';
+
+            setTimeout(() => { window.location.href = "/dashboard"; }, 4000);
+        } catch (e) {
+            alert("Error: " + e.message);
+            btn.innerText = "PAY & CONFIRM TICKET";
+            btn.disabled = false;
+        }
+    }
+
+    initCheckout();
+</script>
+</body>
+</html>
