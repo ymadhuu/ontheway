@@ -1,4 +1,5 @@
 firebase_key.json
+firebase_key.jeson
 .env
 __pycache__/
-*.pycgit rm --cached firebase_key.json
+*.pyc
