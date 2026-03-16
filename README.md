@@ -59,6 +59,3 @@ ONTHEWAY
 - Firebase authentication
 - Web-based responsive interface
 
----
-
-## 🚀 How to Run the Project
